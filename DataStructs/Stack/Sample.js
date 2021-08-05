@@ -10,7 +10,7 @@ s.push("String");
 
 // Stack 이 비어있음을 확인하면서 출력
 while(!s.isEmpty()) {
-    console.log(s.pop());
+    console.log(s.top());
 }
 
 /* 
