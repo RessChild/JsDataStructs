@@ -1,0 +1,167 @@
+const Deque = require('../Deque/Deque');
+
+// Heap 트리를 구성할 노드 클래스
+class Node {
+    #data = null; // 보유한 값은 미설정
+    #parent = null; // 자신의 부모
+    #children = [null, null]; // 좌우 자식 정보
+
+    constructor(parent) { // 부모정보가 반드시 필요
+        parent && (this.#parent = parent);
+    }
+    // 리프인가? (자식이 모두 null 이면 리프)
+    isLeaf () { return this.#children.reduce((acc, child) => acc || child ) === null; }
+
+    // 데이터 setter/getter
+    setData(data) { this.#data = data; }
+    getData() { return this.#data; }
+    // 부모정보
+    setParent (parent) { this.#parent = parent; }
+    getParent () { return this.#parent; }
+    // 자식정보
+    makeChildren () { 
+        this.#children = this.#children.map((child) => {
+            // 이미 만들어진게 있으면 그대로 반환하고, 없으면 새로 만들어 반환
+            return child || new Node(this);
+        })
+        return this.#children;
+    }
+    setChildren (newChildren) { this.#children = newChildren; }
+    getChildren () { return this.#children; } // 자식정보 반환
+}
+
+class Heap {
+    #root = null; // Heap 트리의 루트
+    #deq = new Deque(); // 트리의 삽입구간을 저장할 deque
+
+    // 비교기준이 되는 함수
+    #compare = (p, c) => { // 기본은 내림차순 ( 큰 값부터 )
+        return p >= c; 
+    };
+    constructor(customCompare) {
+        // 루트노드를 만들고, 해당 시점이 처음 값으로 들어갈 공간
+        this.#root = new Node();
+        this.#deq.pushBack(this.#root); 
+        // 비교함수를 따로 만들었다면, 교체
+        if(typeof customCompare === "function") this.#compare = customCompare;
+    }
+    isEmpty() { // Heap이 비어있는가?
+        // Deque 나중에 기능 추가해서 개선하는게 좋아보임
+        const next = this.#deq.popFront();
+        this.#deq.pushFront(next);
+        return next.getParent() === null; // 넣을 공간이 루트면 비어있는것
+    }
+    push(data) { // Heap 에 데이터 삽입 과정
+        
+        const next = this.#deq.popFront(); // 넣을 위치 얻어와서
+        next.setData(data); // 값 세팅
+
+        const nextChildren = next.makeChildren(); // 새 자식을 생성
+        nextChildren.forEach( element => { // 각 자식에 대해서 null 판별하고 삽입
+            element && this.#deq.pushBack(element);
+        });
+
+        // 삽입한 노드를 heap 규칙에 따라 정렬
+        while( next.getParent() ) { // 최대 꼭대기까지 올라감
+            const nextParent = next.getParent();
+            console.log("compare push", nextParent, next);
+
+            // 비교 결과가 참이면 이동을 멈춤 (수정 불필요)
+            if( this.#compare(nextParent.getData(), next.getData()) ) break;
+
+            // 아래쪽 자식정보랑, 위쪽 부모정보는 변함없음
+            const saveChildren = next.getChildren();
+            const saveParent = nextParent.getParent();
+
+            // 부모가 갖고있던 자식정보 중, next 위치를 찾아서 값을 바꿈
+            const newCList = nextParent.getChildren().map( child => {
+                // 기존에 비교했던 놈이 있던 곳이면 부모정보로 바꾸기
+                (child === next) ? nextParent : child;
+            });
+            // 자식을 위로 올림
+            next.setChildren(newCList);
+            next.setParent(saveParent);
+            // 부모를 밑으로 내림
+            nextParent.setChildren(saveChildren);
+            nextParent.setParent(next);
+        }
+    }
+    top() {
+        // 가장 위에 있는 놈을 제공하고, 밑단을 붙여서 다시 정리
+        const output = this.#root;
+
+        // 가장 마지막으로 붙은 두 노드의 부모가 가장 마지막으로 값을 받은 놈
+        let lastChildren = [null, null];
+        lastChildren = lastChildren.map( () => this.#deq.popBack() );
+        // 위로 붙일 부모노드
+        let lastNode = lastChildren.reduce((acc, child) => acc || child.getParent());
+
+        {
+            // 루트의 부모정보를 얻어와 부모쪽에 붙일 빈 노드를 만듦 ( 부모랑 연결 끊기 )
+            const lastNode_parent = lastNode.getParent();
+            const newEmptyNode = new Node(lastNode_parent);
+            lastNode_parent.setChildren(
+                lastNode_parent.getChildren()
+                    .map( child => child === lastNode ? newEmptyNode : child ));
+            this.#deq.pushFront( newEmptyNode ); // 가장 먼저 채워져야 하는 놈이기 때문에, 앞쪽에 붙음
+
+            // 현재 루트가 가진 자식 정보를 받아오고, 위치를 바꿔줌
+            lastNode.setParent(null); // 루트로 갈거기 떄문에 정보 제거
+            const rootChildren = output.getChildren();
+            // 기존 루트의 자식들이 새 루트를 보도록 수정
+            rootChildren.forEach( child => child.setParent(lastNode) ); 
+            lastNode.setChildren( rootChildren ); // 자식정보로 넘기고
+            this.#root = lastNode; // 루트 정보를 갱신
+        }
+
+        // 맨 위로 올라간 놈을 규칙에 맞게 조정
+        let next, leftover;
+        {
+            const [ leftC, rightC ] = lastNode.getChildren(); // 자식 둘 중, 규칙에 맞는 놈을 선택
+            if(this.#compare(leftC, rightC)) {
+                next = leftC;
+                leftover = rightC;
+            }
+            else {
+                next = rightC;
+                leftover = leftC;
+            }
+        }
+        while( !next.isLeaf() ) { // 리프가 아닐동안 진행
+            // 구조가 멀쩡하면 더이상 수정 없음
+            if( this.#compare(lastNode, next) ) break;
+
+            // 고정값을 저장
+            const saveChildren = next.getChildren();
+            const saveParnet = lastNode.getParent();
+
+            // 서로 바꿔야하는 값도 새로 만듦
+            const newCList = lastNode.getChildren().map( child => child === next ? lastNode : child );
+            
+            // 실제로 바꾸기
+            lastNode.setParent(next);
+            saveChildren.forEach( child => child.setParent(lastNode) );
+            lastNode.setChildren(saveChildren);
+            next.setParent(saveParnet);
+            next.setChildren(newCList);
+            leftover.setParent(lastNode);
+
+            // 이전이 루트였으면, 루트도 바꿈
+            if( saveParnet == null ) this.#root = next; 
+
+            const [ leftC, rightC ] = lastNode.getChildren(); // 자식 둘 중, 규칙에 맞는 놈을 선택
+            if(this.#compare(leftC, rightC)) {
+                next = leftC;
+                leftover = rightC;
+            }
+            else {
+                next = rightC;
+                leftover = leftC;
+            }
+        }
+
+        return output.getData();
+    }
+}
+
+module.exports = Heap;
