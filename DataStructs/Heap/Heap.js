@@ -46,7 +46,7 @@ class Heap {
         if(typeof customCompare === "function") this.#compare = customCompare;
     }
     isEmpty() { // Heap이 비어있는가?
-        // Deque 나중에 기능 추가해서 개선하는게 좋아보임
+        /* Deque 나중에 기능 추가해서 개선하는게 좋아보임 */
         const next = this.#deq.popFront();
         this.#deq.pushFront(next);
         return next.getParent() === null; // 넣을 공간이 루트면 비어있는것
@@ -63,24 +63,39 @@ class Heap {
 
         // 삽입한 노드를 heap 규칙에 따라 정렬
         while( next.getParent() ) { // 최대 꼭대기까지 올라감
-            const nextParent = next.getParent();
-            console.log("compare push", nextParent, next);
+
+            const nextParent = next.getParent(); // 현재 노드의 부모정보
+            // console.log("compare push", nextParent, next);
+
+            console.log("push(1):::", nextParent.getData(), next.getData());
 
             // 비교 결과가 참이면 이동을 멈춤 (수정 불필요)
             if( this.#compare(nextParent.getData(), next.getData()) ) break;
 
             // 아래쪽 자식정보랑, 위쪽 부모정보는 변함없음
-            const saveChildren = next.getChildren();
-            const saveParent = nextParent.getParent();
+            const saveChildren = next.getChildren(); // 내 자식정보들
+            const saveParent = nextParent.getParent(); // 내 부모가 가지고 있던 부모정보
 
             // 부모가 갖고있던 자식정보 중, next 위치를 찾아서 값을 바꿈
             const newCList = nextParent.getChildren().map( child => {
                 // 기존에 비교했던 놈이 있던 곳이면 부모정보로 바꾸기
-                (child === next) ? nextParent : child;
+                if (child === next) {
+                    return nextParent;
+                }
+                else {
+                    child.setParent(next);
+                    return child;
+                }
             });
-            // 자식을 위로 올림
+            
+            // 내 자식들이 갖고있던 부모정보도 수정
+            saveChildren.forEach( child => child.setParent(nextParent) );
+
+            // 현재 노드를 위로 올림
             next.setChildren(newCList);
             next.setParent(saveParent);
+            if( !saveParent ) this.#root = next; // 끝까지 올라간 경우, 루트가 바뀜
+
             // 부모를 밑으로 내림
             nextParent.setChildren(saveChildren);
             nextParent.setParent(next);
@@ -118,7 +133,7 @@ class Heap {
         let next, leftover;
         {
             const [ leftC, rightC ] = lastNode.getChildren(); // 자식 둘 중, 규칙에 맞는 놈을 선택
-            if(this.#compare(leftC, rightC)) {
+            if(this.#compare( leftC, rightC )) {
                 next = leftC;
                 leftover = rightC;
             }
@@ -133,24 +148,43 @@ class Heap {
 
             // 고정값을 저장
             const saveChildren = next.getChildren();
-            const saveParnet = lastNode.getParent();
+            const saveParent = lastNode.getParent();
 
             // 서로 바꿔야하는 값도 새로 만듦
-            const newCList = lastNode.getChildren().map( child => child === next ? lastNode : child );
+            const newCList = lastNode.getChildren().map( child => {
+                if( child === next ) {
+                    return lastNode;
+                } else {
+                    child.setParent(next);
+                    return child
+                }
+            });
             
-            // 실제로 바꾸기
-            lastNode.setParent(next);
+            // 자식이 갖고있던 자식의 부모정보를 갱신
             saveChildren.forEach( child => child.setParent(lastNode) );
-            lastNode.setChildren(saveChildren);
-            next.setParent(saveParnet);
-            next.setChildren(newCList);
-            leftover.setParent(lastNode);
 
             // 이전이 루트였으면, 루트도 바꿈
-            if( saveParnet == null ) this.#root = next; 
+            if( saveParent == null ) {
+                this.#root = next; 
+            } 
+            else { // 루트가 아니라면 이놈의 자식연결도 바꿔줘야함
+                saveParent.setChildren(
+                    saveParent.getChildren().map( child => child === lastNode ? next : child ));
+            }
 
-            const [ leftC, rightC ] = lastNode.getChildren(); // 자식 둘 중, 규칙에 맞는 놈을 선택
-            if(this.#compare(leftC, rightC)) {
+            // 아래놈을 위로 올림
+            lastNode.setParent(next);
+            lastNode.setChildren(saveChildren);
+
+            // 윗놈을 아래로 내림
+            next.setParent(saveParent);
+            next.setChildren(newCList);
+            
+            // 남아있던 다른놈은 부모정보가 next 로 바뀜
+            leftover.setParent(next);
+
+            const [ leftC, rightC ] = saveChildren; // 자식 둘 중, 규칙에 맞는 놈을 선택
+            if(this.#compare(...saveChildren)) {
                 next = leftC;
                 leftover = rightC;
             }
@@ -161,6 +195,26 @@ class Heap {
         }
 
         return output.getData();
+    }
+
+    // 잘 들어가있나 탐색확인
+    search(node) {
+        if(!node){
+            console.log("search::", this.#root.getData(), "시작")
+            const children = this.#root.getChildren();
+            children.forEach( child => {
+                if( child != null ) this.search(child);
+            });
+            console.log("search::", this.#root.getData(), "종료")
+        }
+        else {
+            console.log("search::", node.getData(), "시작")
+            const children = node.getChildren();
+            children.forEach( child => {
+                if( child != null ) this.search(child);
+            });
+            console.log("search::", node.getData(), "종료")
+        }
     }
 }
 
