@@ -36,7 +36,8 @@ class Heap {
 
     // 비교기준이 되는 함수
     #compare = (p, c) => { // 기본은 내림차순 ( 큰 값부터 )
-        return p >= c; 
+        // null 의 경우, 0과 같은 비교연산 취급하므로, 예외처리가 필요함
+        return p >= c;
     };
     constructor(customCompare) {
         // 루트노드를 만들고, 해당 시점이 처음 값으로 들어갈 공간
@@ -63,11 +64,7 @@ class Heap {
 
         // 삽입한 노드를 heap 규칙에 따라 정렬
         while( next.getParent() ) { // 최대 꼭대기까지 올라감
-
             const nextParent = next.getParent(); // 현재 노드의 부모정보
-            // console.log("compare push", nextParent, next);
-
-            console.log("push(1):::", nextParent.getData(), next.getData());
 
             // 비교 결과가 참이면 이동을 멈춤 (수정 불필요)
             if( this.#compare(nextParent.getData(), next.getData()) ) break;
@@ -106,34 +103,40 @@ class Heap {
         const output = this.#root;
 
         // 가장 마지막으로 붙은 두 노드의 부모가 가장 마지막으로 값을 받은 놈
-        let lastChildren = [null, null];
-        lastChildren = lastChildren.map( () => this.#deq.popBack() );
-        // 위로 붙일 부모노드
-        let lastNode = lastChildren.reduce((acc, child) => acc || child.getParent());
-
+        const first = this.#deq.popBack();
+        const second = this.#deq.popBack();
+        let lastNode = first.getParent() || second.getParent();
         {
             // 루트의 부모정보를 얻어와 부모쪽에 붙일 빈 노드를 만듦 ( 부모랑 연결 끊기 )
             const lastNode_parent = lastNode.getParent();
             const newEmptyNode = new Node(lastNode_parent);
-            lastNode_parent.setChildren(
-                lastNode_parent.getChildren()
-                    .map( child => child === lastNode ? newEmptyNode : child ));
-            this.#deq.pushFront( newEmptyNode ); // 가장 먼저 채워져야 하는 놈이기 때문에, 앞쪽에 붙음
 
+            // 꺼내오는 놈이 루트가 아니라면, 부모정보쪽에 갱신이 필요
+            if( lastNode_parent ) {
+                lastNode_parent.setChildren(
+                    lastNode_parent.getChildren()
+                        .map( child => child === lastNode ? newEmptyNode : child ));
+                this.#root = lastNode; // 루트 정보를 갱신
+            }
+            else { // 단 꺼내는값이 루트면, 빈 노드가 루트가 되야함
+                this.#root = newEmptyNode;
+            } 
+            
+            this.#deq.pushFront( newEmptyNode ); // 가장 먼저 채워져야 하는 놈이기 때문에, 앞쪽에 붙음
+            
             // 현재 루트가 가진 자식 정보를 받아오고, 위치를 바꿔줌
             lastNode.setParent(null); // 루트로 갈거기 떄문에 정보 제거
-            const rootChildren = output.getChildren();
             // 기존 루트의 자식들이 새 루트를 보도록 수정
+            const rootChildren = output.getChildren();
             rootChildren.forEach( child => child.setParent(lastNode) ); 
             lastNode.setChildren( rootChildren ); // 자식정보로 넘기고
-            this.#root = lastNode; // 루트 정보를 갱신
         }
 
         // 맨 위로 올라간 놈을 규칙에 맞게 조정
         let next, leftover;
         {
             const [ leftC, rightC ] = lastNode.getChildren(); // 자식 둘 중, 규칙에 맞는 놈을 선택
-            if(this.#compare( leftC, rightC )) {
+            if( this.#compare( leftC.getData(), rightC.getData() )) {
                 next = leftC;
                 leftover = rightC;
             }
@@ -144,7 +147,7 @@ class Heap {
         }
         while( !next.isLeaf() ) { // 리프가 아닐동안 진행
             // 구조가 멀쩡하면 더이상 수정 없음
-            if( this.#compare(lastNode, next) ) break;
+            if( this.#compare(lastNode.getData(), next.getData()) ) break;
 
             // 고정값을 저장
             const saveChildren = next.getChildren();
@@ -184,7 +187,7 @@ class Heap {
             leftover.setParent(next);
 
             const [ leftC, rightC ] = saveChildren; // 자식 둘 중, 규칙에 맞는 놈을 선택
-            if(this.#compare(...saveChildren)) {
+            if(this.#compare(leftC.getData(), rightC.getData())) {
                 next = leftC;
                 leftover = rightC;
             }
@@ -199,22 +202,15 @@ class Heap {
 
     // 잘 들어가있나 탐색확인
     search(node) {
-        if(!node){
-            console.log("search::", this.#root.getData(), "시작")
-            const children = this.#root.getChildren();
-            children.forEach( child => {
-                if( child != null ) this.search(child);
-            });
-            console.log("search::", this.#root.getData(), "종료")
-        }
-        else {
-            console.log("search::", node.getData(), "시작")
-            const children = node.getChildren();
-            children.forEach( child => {
-                if( child != null ) this.search(child);
-            });
-            console.log("search::", node.getData(), "종료")
-        }
+        let target = node || this.#root;
+        console.log("탐색시작:: ", target.getData(), " / 부모::", target.getParent() && target.getParent().getData());
+
+        const children = target.getChildren();
+        children.forEach( child => {
+            if( child != null ) this.search(child);
+        });
+
+        console.log("탐색종료:: ", target.getData());
     }
 }
 
