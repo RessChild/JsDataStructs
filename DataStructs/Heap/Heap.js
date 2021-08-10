@@ -67,6 +67,7 @@ class Heap {
             const nextParent = next.getParent(); // 현재 노드의 부모정보
 
             // 비교 결과가 참이면 이동을 멈춤 (수정 불필요)
+
             if( this.#compare(nextParent.getData(), next.getData()) ) break;
 
             // 아래쪽 자식정보랑, 위쪽 부모정보는 변함없음
@@ -88,14 +89,18 @@ class Heap {
             // 내 자식들이 갖고있던 부모정보도 수정
             saveChildren.forEach( child => child.setParent(nextParent) );
 
+            // 부모를 밑으로 내림
+            nextParent.setChildren(saveChildren);
+            nextParent.setParent(next);
+
             // 현재 노드를 위로 올림
             next.setChildren(newCList);
             next.setParent(saveParent);
             if( !saveParent ) this.#root = next; // 끝까지 올라간 경우, 루트가 바뀜
-
-            // 부모를 밑으로 내림
-            nextParent.setChildren(saveChildren);
-            nextParent.setParent(next);
+            else { // 루트가 아니면 그 부모정보로 연결된 자식정보를 수정
+                saveParent.setChildren(
+                    saveParent.getChildren().map( child => child === nextParent ? next: child ));
+            }
         }
     }
     top() {
@@ -136,7 +141,8 @@ class Heap {
         let next, leftover;
         {
             const [ leftC, rightC ] = lastNode.getChildren(); // 자식 둘 중, 규칙에 맞는 놈을 선택
-            if( this.#compare( leftC.getData(), rightC.getData() )) {
+            if( ( leftC == null || !rightC == null ) || this.#compare( leftC.getData(), rightC.getData() )) {
+                // 자식 노드 중 null 이 껴있거나, 비교상으로 우위를 비교
                 next = leftC;
                 leftover = rightC;
             }
