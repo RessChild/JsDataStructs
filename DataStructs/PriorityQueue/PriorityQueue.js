@@ -31,24 +31,30 @@ class PriorityQueue {
     }
     top () {
         const output = this.#list[1]; // 1번 인덱스가 pq 의 출력값
-        this.#list[1] = this.#list.pop(); // 맨 뒤를 뽑아내고 앞으로 집어넣음
 
-        let idx = 1; // 1번인덱스부터 하위로 내려감
-        while( idx * 2 < this.#list.length ) {
-            // 우측 자식이 존재하면, 두 값을 비교해서 규칙에 맞는 놈을 선택
-            // 존재하지 않으면 왼쪽 자식을 선택할 수 밖에 없음
-            let next = idx*2 + 1 < this.#list.length 
-                ? (this.#compare( this.#list[idx*2], this.#list[idx*2 + 1] ) ? idx*2 : idx*2 + 1 )
-                : idx*2;
-            // 규칙이 성립하면 종료
-            if( this.#compare(this.#list[idx], this.#list[next]) ) break;
+        if( this.#list.length > 1 ){
+            const last = this.#list.pop(); // 맨 뒤를 뽑아내고 앞으로 집어넣음
 
-            const tmp = this.#list[next];
-            this.#list[next] = this.#list[idx];
-            this.#list[idx] = tmp;
+            // 뽑은게 마지막 데이터가 아니면 상단으로 옮김
+            this.#list.length > 1 && (this.#list[1] = last);
 
-            idx = next; // 다음 비교로 넘어감
-        } 
+            let idx = 1; // 1번인덱스부터 하위로 내려감
+            while( idx * 2 < this.#list.length ) {
+                // 우측 자식이 존재하면, 두 값을 비교해서 규칙에 맞는 놈을 선택
+                // 존재하지 않으면 왼쪽 자식을 선택할 수 밖에 없음
+                let next = idx*2 + 1 < this.#list.length 
+                    ? (this.#compare( this.#list[idx*2], this.#list[idx*2 + 1] ) ? idx*2 : idx*2 + 1 )
+                    : idx*2;
+                // 규칙이 성립하면 종료
+                if( this.#compare(this.#list[idx], this.#list[next]) ) break;
+
+                const tmp = this.#list[next];
+                this.#list[next] = this.#list[idx];
+                this.#list[idx] = tmp;
+
+                idx = next; // 다음 비교로 넘어감
+            } 
+        }
         return output;
     }
     search() {
