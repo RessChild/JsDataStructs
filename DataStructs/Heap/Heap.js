@@ -1,3 +1,4 @@
+// Priority Queue 와 동일한 기능
 const Deque = require('../Deque/Deque');
 
 // Heap 트리를 구성할 노드 클래스
