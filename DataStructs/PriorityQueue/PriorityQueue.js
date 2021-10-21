@@ -12,16 +12,12 @@ class PriorityQueue {
     // 지원 함수들
     push (data) {
         // 맨 뒤쪽에 새로운 값을 삽입
-        // this.search();
         let idx = this.#list.length; // 새 값이 들어가는 인덱스 정보
         this.#list.push(data);
-        // this.search();
 
         while ( Math.floor(idx/2) > 0 ) { // 규칙에 맞춰서 위로 거슬러 올라감
             const pIdx = Math.floor(idx/2); // 부모 인덱스
             if( this.#compare(this.#list[pIdx], this.#list[idx]) ) break; // 규칙 성립하면 무시
-            
-            // console.log(data, "거슬러 올라감", pIdx, idx);
 
             const tmp = this.#list[pIdx];
             this.#list[pIdx] = this.#list[idx];
