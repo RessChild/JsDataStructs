@@ -65,22 +65,48 @@ class LinkedList {
             this.#root = node.point;
             node.point = null; // 연결 끊기
         }
-        return node.value;
+        return node && node.value;
     }
-    // remove (target) { // 특정 객체 삭제
-    //     const next = this.#root;
-    //     while(next){ // null, undefined 가 아니면 계속 진행
-    //         if( next.point == target ) break; // 대상이 일치하면 끝
-    //         next = next.point; // 다음으로 이동
-    //     }
-    //     if(!next) return null; // 삭제한 값이 없음
-        
-    //     const targetNode = next.point; // 지워야하는 타겟노드
 
-    // }
-    // removeByIndex (idx) { // 인덱스 기반으로 삭제
+    remove (target) { // 특정 객체 삭제
+        let node = null; // 삭제 대상
 
-    // }
+        let before = null; // 앞쪽 노드
+        let next = this.#root; // 현재 노드
+        while(next){ // null, undefined 가 아니면 계속 진행
+            if( next.value == target ) break; // 대상이 일치하면 끝
+            before = next; // 이전 노드로 기록
+            next = next.point; // 다음으로 이동
+        }
+        if(next) { // 찾아낸 값이 있으면
+            if(!before) this.#root = next.point; // 찾은 값이 루트라면 루트 갱신
+            else before.point = next.point; // 루트 외의 노드라면 뒤쪽과 연결
+            next.point = null; // 연결 끊기
+            node=next; // 노드 빼내기
+        } 
+        return node && node.value; // 반환
+    }
+
+    removeByIndex (idx) { // 인덱스 기반으로 삭제
+        // 인덱스가 존재하지 않는 값으로 나오면, null 반환
+        let node = null; 
+
+        let before = null; // 앞쪽 노드
+        let next = this.#root; // 현재 노드
+        for(let i=0; next && i<idx; i++) { 
+            // 가능한 범위 내에서, 인덱스 위치까지 이동
+            before = next;
+            next = next.point;
+        }
+
+        if(next) { // 찾아낸 값이 있으면
+            if(!before) this.#root = next.point; // 찾은 값이 루트라면 루트 갱신
+            else before.point = next.point; // 루트 외의 노드라면 뒤쪽과 연결
+            next.point = null; // 연결 끊기
+            node=next; // 노드 빼내기
+        } 
+        return node && node.value; // 반환
+    }
 
     isEmpty () { return !this.#root; }
 }
